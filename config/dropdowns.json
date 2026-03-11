@@ -1,0 +1,10 @@
+{
+  "declineReasons": [
+    "Incomplete work",
+    "Missing documentation",
+    "Incorrect implementation",
+    "Requirements not met",
+    "Needs further testing",
+    "Other"
+  ]
+}

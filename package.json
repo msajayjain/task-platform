@@ -1,0 +1,32 @@
+{
+  "name": "task-platform",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n API,WEB -c cyan,magenta \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w packages/types && npm run build -w apps/api && npm run build -w apps/web",
+    "test": "npm run test -w apps/api",
+    "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
+    "prisma:generate": "npm run prisma:generate -w apps/api",
+    "prisma:migrate": "npm run prisma:migrate -w apps/api",
+    "prisma:seed": "npm run prisma:seed -w apps/api"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+
+
+
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

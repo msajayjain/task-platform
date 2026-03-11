@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: Ruchi
+          POSTGRES_DB: task_platform_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgresql://postgres:Ruchi@localhost:5432/task_platform_test
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: test_access_secret
+      JWT_REFRESH_SECRET: test_refresh_secret
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 7d
+      BCRYPT_SALT_ROUNDS: 10
+      OPENAI_API_KEY: test
+      OPENAI_MODEL: gpt-4o-mini
+      CSRF_SECRET: test_csrf_secret
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run prisma:generate
+      - run: npm run prisma:migrate
+      - run: npm run build
+      - run: npm run test

@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: task_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d task_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    image: ${TP_DOCKERHUB_USER:-ajayjain21}/task-platform-api:${TP_APP_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${TP_NODE_ENV:-production}
+      DATABASE_URL: ${TP_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/task_platform}
+      REDIS_URL: ${TP_REDIS_URL:-redis://redis:6379}
+
+      # Security: set real values in .env.cloud
+      JWT_ACCESS_SECRET: ${TP_JWT_ACCESS_SECRET:-replace_with_at_least_32_char_access_secret}
+      JWT_REFRESH_SECRET: ${TP_JWT_REFRESH_SECRET:-replace_with_at_least_32_char_refresh_secret}
+      JWT_ACCESS_TTL: ${TP_JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${TP_JWT_REFRESH_TTL:-7d}
+      BCRYPT_SALT_ROUNDS: ${TP_BCRYPT_SALT_ROUNDS:-12}
+      CSRF_SECRET: ${TP_CSRF_SECRET:-replace_with_at_least_32_char_csrf_secret}
+
+      # AI provider config
+      AI_FALLBACK_PROVIDER: ${TP_AI_FALLBACK_PROVIDER:-auto}
+      FREE_GEMINI_KEY: ${TP_FREE_GEMINI_KEY:-}
+      FREE_GEMINI_MODEL: ${TP_FREE_GEMINI_MODEL:-gemini-2.0-flash-lite}
+      FREE_GEMINI_API_URL: ${TP_FREE_GEMINI_API_URL:-https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent}
+      HUGGINGFACE_API_KEY: ${TP_HUGGINGFACE_API_KEY:-}
+      HUGGINGFACE_MODEL: ${TP_HUGGINGFACE_MODEL:-HuggingFaceH4/zephyr-7b-beta}
+      HUGGINGFACE_API_URL: ${TP_HUGGINGFACE_API_URL:-https://api-inference.huggingface.co/models}
+      LOCAL_LLM_MODEL: ${TP_LOCAL_LLM_MODEL:-qwen2.5:0.5b}
+      LOCAL_LLM_API_URL: ${TP_LOCAL_LLM_API_URL:-http://host.docker.internal:11434/api/generate}
+
+      API_BASE_URL: ${TP_API_BASE_URL:-http://localhost:3001}
+      WEB_BASE_URL: ${TP_WEB_BASE_URL:-http://localhost:3000}
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy --config ./prisma.config.ts && npm run start -w apps/api"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  web:
+    image: ${TP_DOCKERHUB_USER:-ajayjain21}/task-platform-web:${TP_APP_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${TP_NODE_ENV:-production}
+      API_PROXY_TARGET: ${TP_API_PROXY_TARGET:-http://api:3001}
+      API_BASE_URL: ${TP_API_BASE_URL:-http://localhost:3001}
+      WEB_BASE_URL: ${TP_WEB_BASE_URL:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:

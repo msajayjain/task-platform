@@ -1,0 +1,9 @@
+{
+  "workflowStages": [
+    "Todo",
+    "In Progress",
+    "Code Review",
+    "QA Testing",
+    "Completed"
+  ]
+}
