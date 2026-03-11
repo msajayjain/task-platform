@@ -27,6 +27,12 @@ Expected:
 - version outputs for node/npm/psql
 - `PONG` for Redis ping
 
+If Redis is not installed locally, run Redis via Docker:
+- `docker compose up -d redis`
+
+Then verify port `6379` is listening (PowerShell):
+- `Get-NetTCPConnection -LocalPort 6379 -ErrorAction SilentlyContinue`
+
 ### 3) Start local services
 
 - Start PostgreSQL server on `localhost:5432`
@@ -153,6 +159,7 @@ Seed also creates default teams:
 
 - If API cannot connect to DB in local mode, re-check `DATABASE_URL` and PostgreSQL service status.
 - If Redis errors appear in local mode, re-check `REDIS_URL` and Redis service status.
+- For detailed Redis runtime behavior and fixes, see: `docs/redis_doc.md`.
 - If first login fails, run seed again:
 	- Local: `npm run prisma:seed`
 	- Docker: `docker compose exec api npm run prisma:seed -w apps/api`

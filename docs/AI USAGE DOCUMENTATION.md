@@ -226,6 +226,7 @@ Additional practical limitations observed during implementation:
 - **Error handling defaulted to generic responses:** In testing, the validation case **"user already exists"** initially surfaced as a default **500** path instead of a clear conflict response, and had to be corrected to a proper business error mapping.
 - **Environment-context sensitivity:** AI-generated smoke/test commands sometimes worked only in a specific workspace context (for example, path alias resolution differences between repo root and package workspace), so commands needed adjustment.
 - **Operational assumptions can be optimistic:** AI often assumed local services (like local LLM runtime) were always available; fallback behavior worked, but explicit observability messaging had to be added manually.
+- **Runtime dependency availability issues:** During local execution, service assumptions around infrastructure were sometimes wrong; for example, Redis was unreachable and logs showed: `"redis://localhost:6379","msg":"Redis connection error"`.
 
 ---
 
