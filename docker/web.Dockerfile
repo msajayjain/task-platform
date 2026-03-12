@@ -1,5 +1,7 @@
 FROM node:20-alpine AS base
 WORKDIR /app
+ARG API_PROXY_TARGET=http://api:3001
+ENV API_PROXY_TARGET=${API_PROXY_TARGET}
 COPY package*.json ./
 COPY apps/web/package*.json ./apps/web/
 COPY packages/types/package*.json ./packages/types/

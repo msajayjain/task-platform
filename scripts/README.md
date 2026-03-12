@@ -10,6 +10,7 @@ For sharing images through Docker Hub (so others can run without building locall
 - Advanced/reference guide: `docs/HOW_TO_DEPLOY_DOCKER_HUB.md`
 - Required files: `docker-compose.cloud.yml`, `.env.cloud.example`, `scripts/docker-cloud.ps1`
 - Verify Docker Hub tags before pull: `scripts/docker-cloud-verify.ps1`
+- Quick copy-paste onboarding: `docs/DOCKER_ONBOARDING_CHEATSHEET.md`
 
 ---
 
@@ -47,6 +48,9 @@ Default URLs:
 
 Use `scripts/docker.ps1` if you want simple PowerShell commands instead of long Docker Compose commands.
 
+This section is for **local Docker setup** (build from source).
+For cloud Docker Hub setup, use section 4.
+
 ### Before you start (one-time checks)
 
 1. Install Docker Desktop.
@@ -81,6 +85,14 @@ This is why first startup can take a few minutes.
 	- `./scripts/docker.ps1 up -Detached`
 - View logs when running in background:
 	- `./scripts/docker.ps1 logs`
+
+### PowerShell onboarding sequence (local Docker, standardized)
+
+- `docker compose down`
+- `docker compose up --build -d`
+- `docker compose exec api npm run prisma:seed -w apps/api`
+- `docker compose logs web --tail 100`
+- `docker compose logs api --tail 100`
 
 ### Stop and cleanup
 
@@ -119,6 +131,8 @@ If you prefer Command Prompt, use Docker Compose directly:
 
 Use `scripts/docker-cloud.ps1` when images are already published to Docker Hub.
 
+This section is for **cloud Docker setup** (prebuilt images).
+
 ### First-time setup
 
 - `Copy-Item .env.cloud.example .env.cloud`
@@ -133,18 +147,26 @@ Use `scripts/docker-cloud.ps1` when images are already published to Docker Hub.
 	- `./scripts/docker-cloud-verify.ps1 -EnvFile .env.cloud`
 
 - Pull latest images from Docker Hub:
-	- `./scripts/docker-cloud.ps1 pull`
+	- `./scripts/docker-cloud.ps1 pull -EnvFile .env.cloud`
 	- If you get `manifest unknown`, publish/push images first and ensure `.env.cloud` values match pushed tag/user.
 - Start stack in background (recommended):
-	- `./scripts/docker-cloud.ps1 up -Detached`
+	- `./scripts/docker-cloud.ps1 up -Detached -EnvFile .env.cloud`
 - View logs:
-	- `./scripts/docker-cloud.ps1 logs`
+	- `./scripts/docker-cloud.ps1 logs -EnvFile .env.cloud`
 - Show running containers:
-	- `./scripts/docker-cloud.ps1 ps`
+	- `./scripts/docker-cloud.ps1 ps -EnvFile .env.cloud`
 - Stop:
-	- `./scripts/docker-cloud.ps1 down`
+	- `./scripts/docker-cloud.ps1 down -EnvFile .env.cloud`
 - Stop and remove DB volume:
-	- `./scripts/docker-cloud.ps1 down -RemoveVolumes`
+	- `./scripts/docker-cloud.ps1 down -RemoveVolumes -EnvFile .env.cloud`
+
+### PowerShell onboarding sequence (cloud Docker, standardized)
+
+- `Copy-Item .env.cloud.example .env.cloud`
+- `./scripts/docker-cloud-verify.ps1 -EnvFile .env.cloud`
+- `./scripts/docker-cloud.ps1 pull -EnvFile .env.cloud`
+- `./scripts/docker-cloud.ps1 up -Detached -EnvFile .env.cloud`
+- `./scripts/docker-cloud.ps1 ps -EnvFile .env.cloud`
 
 ### Optional: validate cloud compose config
 

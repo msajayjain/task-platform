@@ -1,118 +1,99 @@
 # How to Deploy on Docker Hub Cloud
 
-This is a standalone, beginner-friendly guide to run Task Platform using Docker Hub images.
+## 1) Deploy on cloud (assuming local Docker images are already running, now push to Docker Hub)
 
-## Super-short quickstart (3 commands)
+Section prerequisites:
+- Docker Desktop is running.
+- Local images `task-platform-api:latest` and `task-platform-web:latest` exist.
+- You have Docker Hub credentials.
 
-If images are already published to Docker Hub:
+1. `docker login`  
+   Authenticate your local Docker client to Docker Hub.
 
-1. `Copy-Item .env.cloud.example .env.cloud`
-2. `./scripts/docker-cloud.ps1 pull`
-3. `./scripts/docker-cloud.ps1 up -Detached`
+2. `docker tag task-platform-api:latest <your-user>/task-platform-api:<tag>`  
+   Tag your local API image for Docker Hub.
 
-Open the app:
+3. `docker tag task-platform-web:latest <your-user>/task-platform-web:<tag>`  
+   Tag your local Web image for Docker Hub.
 
-- Web: `http://localhost:3000`
-- API health: `http://localhost:3001/api/health`
+4. `docker push <your-user>/task-platform-api:<tag>`  
+   Push API image to Docker Hub.
 
-> Important: if you see `manifest unknown` during `pull`, it means images/tags are not published yet. Follow the publish checklist below first.
+5. `docker push <your-user>/task-platform-web:<tag>`  
+   Push Web image to Docker Hub.
 
----
+6. `docker pull <your-user>/task-platform-api:<tag>`  
+   Verify API image can be pulled from Docker Hub.
 
-## Before quickstart: publish checklist (owner only)
+7. `docker pull <your-user>/task-platform-web:<tag>`  
+   Verify Web image can be pulled from Docker Hub.
 
-If you are the project owner and users get pull errors, publish images first:
+Example commands:
 
-1. `docker login`
-2. `docker build -f docker/api.Dockerfile -t <your-user>/task-platform-api:latest .`
-3. `docker build -f docker/web.Dockerfile -t <your-user>/task-platform-web:latest .`
-4. `docker push <your-user>/task-platform-api:latest`
-5. `docker push <your-user>/task-platform-web:latest`
-
-Then in `.env.cloud` make sure:
-
-- `TP_DOCKERHUB_USER=<your-user>`
-- `TP_APP_VERSION=latest` (or a version tag you actually pushed)
-
----
-
-## Who should use this guide?
-
-Use this when:
-
-- you want to run from prebuilt Docker Hub images,
-- you do **not** want to build images locally,
-- you want non-technical users to run in a few steps.
+- `docker tag task-platform-web:latest ajayjain/task-platform-web:1.0`
+- `docker tag task-platform-api:latest ajayjain/task-platform-api:1.0`
+- `docker push ajayjain/task-platform-web:1.0`
+- `docker push ajayjain/task-platform-api:1.0`
 
 ---
 
-## What users must have before running
+## 2) Deploy on cloud from beginning using `docker-compose.cloud.yml` (direct compose commands)
 
-1. Docker Desktop installed and running.
-2. Project repo cloned (recommended), **or** at least these files present locally:
-  - `docker-compose.cloud.yml`
-  - `.env.cloud.example` (copy to `.env.cloud`)
-  - `scripts/docker-cloud.ps1`
-  - `scripts/docker-cloud-verify.ps1`
+Section prerequisites:
+- Docker Desktop is running.
+- You are in repo root (`task-platform`).
+- Files exist: `docker-compose.cloud.yml` and `.env.cloud.example`.
 
----
+1. `Copy-Item .env.cloud.example .env.cloud`  
+   Create cloud environment file from template.
 
-## First-time setup (one-time)
+2. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml pull`  
+   Pull API/Web images and required runtime images.
 
-1. Ensure Docker Desktop is installed and running.
-2. From project root, copy env template:
-   - `Copy-Item .env.cloud.example .env.cloud`
-3. Edit `.env.cloud` and set these required values:
-   - `TP_DOCKERHUB_USER` (example: `ajayjain21`)
-   - `TP_APP_VERSION` (example: `latest` or `1.0.0`)
-   - `TP_JWT_ACCESS_SECRET`
-   - `TP_JWT_REFRESH_SECRET`
-   - `TP_CSRF_SECRET`
+3. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml up -d`  
+   Start full cloud stack in background.
 
----
+4. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml ps`  
+   Confirm service health and running status.
 
-## Run commands (PowerShell)
+5. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml logs -f`  
+   Follow logs for startup verification and troubleshooting.
 
-- Verify image tags exist on Docker Hub (recommended first):
-  - `./scripts/docker-cloud-verify.ps1 -EnvFile .env.cloud`
-- Pull latest images:
-  - `./scripts/docker-cloud.ps1 pull`
-- Start containers in background:
-  - `./scripts/docker-cloud.ps1 up -Detached`
-- View logs:
-  - `./scripts/docker-cloud.ps1 logs`
-- Check running services:
-  - `./scripts/docker-cloud.ps1 ps`
-- Stop containers:
-  - `./scripts/docker-cloud.ps1 down`
-- Stop + remove DB data:
-  - `./scripts/docker-cloud.ps1 down -RemoveVolumes`
+6. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml down`  
+   Stop all running cloud stack services.
+
+7. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml down -v`  
+   Stop services and remove volumes (destructive for DB data).
 
 ---
 
-## Optional direct Docker Compose commands
+## 3) Deploy on cloud from beginning using `docker-compose.cloud.yml` (PowerShell scripts)
 
-If you don’t want helper scripts:
+Section prerequisites:
+- PowerShell is opened at repo root (`task-platform`).
+- Docker Desktop is running.
+- Files exist: `scripts/docker-cloud.ps1`, `scripts/docker-cloud-verify.ps1`, and `.env.cloud.example`.
 
-- `docker compose --env-file .env.cloud -f docker-compose.cloud.yml pull`
-- `docker compose --env-file .env.cloud -f docker-compose.cloud.yml up -d`
-- `docker compose --env-file .env.cloud -f docker-compose.cloud.yml logs -f`
+1. `Copy-Item .env.cloud.example .env.cloud`  
+   Create cloud environment file from template.
 
----
+2. `./scripts/docker-cloud-verify.ps1 -EnvFile .env.cloud`  
+   Validate Docker Hub image/tag availability before pull.
 
-## Common issues
+3. `./scripts/docker-cloud.ps1 pull -EnvFile .env.cloud`  
+   Pull all required images for cloud stack.
 
-1. **Command not found for script**
-   - Run from repo root: `task-platform`.
-2. **PowerShell blocks script**
-   - Run once as admin:
-     - `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
-3. **Auth errors after startup**
-   - Replace JWT/CSRF placeholders in `.env.cloud`.
-4. **API starts but AI calls fail**
-   - Add a valid AI key in `.env.cloud`.
-  - Ensure `TP_AI_FALLBACK_PROVIDER` is one of: `auto`, `local`, `huggingface`, `none`.
-5. **`manifest unknown` when running pull**
-  - The image tag does not exist on Docker Hub.
-  - Run `./scripts/docker-cloud-verify.ps1 -EnvFile .env.cloud` to confirm missing tags.
-  - Push that tag first, then retry `./scripts/docker-cloud.ps1 pull`.
+4. `./scripts/docker-cloud.ps1 up -Detached -EnvFile .env.cloud`  
+   Start full cloud stack in background mode.
+
+5. `./scripts/docker-cloud.ps1 ps -EnvFile .env.cloud`  
+   Check running container and health status.
+
+6. `./scripts/docker-cloud.ps1 logs -EnvFile .env.cloud`  
+   View runtime logs for validation or troubleshooting.
+
+7. `./scripts/docker-cloud.ps1 down -EnvFile .env.cloud`  
+   Stop all running cloud stack services.
+
+8. `./scripts/docker-cloud.ps1 down -RemoveVolumes -EnvFile .env.cloud`  
+   Stop services and remove volumes (destructive for DB data).

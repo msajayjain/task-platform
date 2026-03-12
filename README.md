@@ -264,16 +264,45 @@ npm run dev
 Prerequisite:
 - Docker Desktop (`https://www.docker.com/products/docker-desktop/`)
 
-You do **not** need local PostgreSQL/Redis installs for Docker-only onboarding.
+You do **not** need local PostgreSQL/Redis/Ollama installs for Docker-only onboarding.
+
+`docker compose up --build` now starts:
+- web
+- api
+- postgres
+- redis
+- ollama (local LLM service)
+
+On first run, model pull may take a few minutes (image + model download).
 
 ```bash
 docker compose up --build
 docker compose exec api npm run prisma:seed -w apps/api
 ```
 
+PowerShell onboarding sequence (local Docker, standardized):
+
+```powershell
+docker compose down
+docker compose up --build -d
+docker compose exec api npm run prisma:seed -w apps/api
+docker compose logs web --tail 100
+docker compose logs api --tail 100
+```
+
 Then open:
 - Web: `http://localhost:3000`
 - API health: `http://localhost:3001/api/health`
+
+If Docker path shows unexpected `500` after image/container changes, run:
+
+```bash
+docker compose down
+docker compose up --build -d
+docker compose exec api npm run prisma:seed -w apps/api
+docker compose logs web --tail 100
+docker compose logs api --tail 100
+```
 
 ### First login credentials (seeded)
 
@@ -356,21 +385,36 @@ Detailed local guide: `docs/HOW_TO_RUN_WITHOUT_DOCKER.md`
 
 ---
 
-## 16. Docker Setup
+## 16. Docker Setup (Local Build + Local Run)
 
-Start full stack with Docker Compose:
+Use this section when you want Docker to build from your local source and run everything on your machine.
+
+Start full stack:
 
 ```bash
 docker compose up --build
 ```
 
-Windows PowerShell helper:
+This starts:
+- `postgres`
+- `redis`
+- `ollama` (local LLM service inside Docker)
+- `api`
+- `web`
+
+`ollama` auto-pulls `TP_LOCAL_LLM_MODEL` before API becomes healthy.
+
+### PowerShell onboarding sequence (local Docker, standardized)
+
+Use this exact sequence from repo root:
 
 ```powershell
-./scripts/docker.ps1 up
+docker compose down
+docker compose up --build -d
+docker compose exec api npm run prisma:seed -w apps/api
+docker compose logs web --tail 100
+docker compose logs api --tail 100
 ```
-
-This now works with portable defaults (no mandatory `.env` edits for local Docker startup).
 
 Optional custom Docker env:
 
@@ -379,34 +423,30 @@ cp .env.docker.example .env.docker
 docker compose --env-file .env.docker up --build
 ```
 
-`.env.docker` uses `TP_*` variable names so Docker overrides do not conflict with your regular root `.env` values.
+`.env.docker` uses `TP_*` variables so Docker overrides do not conflict with normal local `.env` values.
 
 PowerShell helper shortcuts:
-
 - Start detached: `./scripts/docker.ps1 up -Detached`
 - Tail logs: `./scripts/docker.ps1 logs`
 - Stop: `./scripts/docker.ps1 down`
 - Stop and remove volumes: `./scripts/docker.ps1 down -RemoveVolumes`
 - Seed demo data: `./scripts/docker.ps1 seed`
 
-Detailed container guide: `docs/HOW_TO_RUN_WITH_DOCKER.md`
+Detailed guide: `docs/HOW_TO_RUN_WITH_DOCKER.md`
 
-Docker Hub/cloud distribution guide (share prebuilt images with others):
+---
 
-- Primary (recommended for non-technical users): `docs/HOW_TO_DEPLOY_ON_DOCKER_HUB_CLOUD.md`
-- Advanced/reference: `docs/HOW_TO_DEPLOY_DOCKER_HUB.md`
-- Runtime files: `docker-compose.cloud.yml`, `.env.cloud.example`, `scripts/docker-cloud.ps1`
+## 16A. Docker Setup with Cloud (Docker Hub Images)
 
-Before teammate run (consumer side), they must have:
+Use this section when API/Web images are already published to Docker Hub and teammates should run without local image builds.
 
-- Docker Desktop installed and running
-- Project repo cloned (recommended) **or** at least these files locally:
-	- `docker-compose.cloud.yml`
-	- `.env.cloud.example` (then copy to `.env.cloud`)
-	- `scripts/docker-cloud.ps1`
-	- `scripts/docker-cloud-verify.ps1`
+Required runtime files:
+- `docker-compose.cloud.yml`
+- `.env.cloud.example` (copy to `.env.cloud`)
+- `scripts/docker-cloud.ps1`
+- `scripts/docker-cloud-verify.ps1`
 
-Teammate onboarding (PowerShell, 5 commands):
+### PowerShell onboarding sequence (cloud Docker, standardized)
 
 ```powershell
 Copy-Item .env.cloud.example .env.cloud
@@ -415,6 +455,16 @@ Copy-Item .env.cloud.example .env.cloud
 ./scripts/docker-cloud.ps1 up -Detached -EnvFile .env.cloud
 ./scripts/docker-cloud.ps1 ps -EnvFile .env.cloud
 ```
+
+Cloud troubleshooting quick checks:
+- `./scripts/docker-cloud.ps1 logs -EnvFile .env.cloud`
+- `docker compose --env-file .env.cloud -f docker-compose.cloud.yml logs api --tail 100`
+- `docker compose --env-file .env.cloud -f docker-compose.cloud.yml logs web --tail 100`
+
+Detailed guides:
+- Beginner-friendly runtime guide: `docs/HOW_TO_DEPLOY_ON_DOCKER_HUB_CLOUD.md`
+- Advanced publish/reference guide: `docs/HOW_TO_DEPLOY_DOCKER_HUB.md`
+- Quick copy-paste commands: `docs/DOCKER_ONBOARDING_CHEATSHEET.md`
 
 ---
 

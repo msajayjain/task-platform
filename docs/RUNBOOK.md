@@ -1,165 +1,160 @@
 # Runbook
 
-This runbook is split into **two fully separate paths**. Use **one path only**.
+## 1) Run on local (without Docker)
+
+Section prerequisites:
+- Node.js and npm are installed.
+- PostgreSQL is running on `localhost:5432`.
+- Redis is running on `localhost:6379`.
+- You are in repo root (`task-platform`).
+
+1. `Copy-Item .env.example .env`  
+   Create local environment file.
+
+2. `npm install`  
+   Install all workspace dependencies.
+
+3. `npm run prisma:generate`  
+   Generate Prisma client artifacts.
+
+4. `npm run prisma:migrate`  
+   Apply database migrations to local PostgreSQL.
+
+5. `npm run prisma:seed`  
+   Seed default users/teams/workflow data.
+
+6. `npm run dev`  
+   Start local API and Web in development mode.
+
+7. `Invoke-WebRequest -UseBasicParsing http://localhost:3001/api/health`  
+   Verify API health endpoint is responding.
 
 ---
 
-## Path 1 — Run **Without Docker** (Local PostgreSQL + Redis)
+## 2) Deploy on local (using `docker-compose.yml`)
 
-### 1) Install required software
+Section prerequisites:
+- Docker Desktop is running.
+- You are in repo root (`task-platform`).
+- Files exist: `docker-compose.yml` and `.env.example`.
 
-- Node.js 20+ (includes npm): `https://nodejs.org/en/download`
-- PostgreSQL: `https://www.postgresql.org/download/`
-- Redis install docs: `https://redis.io/docs/latest/operate/oss_and_stack/install/install-redis/`
-	- Windows note: local native Redis support is limited; Docker/WSL2 is commonly used.
+1. `Copy-Item .env.example .env`  
+   Create runtime environment file for local Docker stack.
 
-### 2) Verify software is installed
+2. `docker compose down`  
+   Stop and clean any previous local stack state.
 
-Run:
-- `node -v`
-- `npm -v`
-- `psql --version`
+3. `docker compose up --build -d`  
+   Build and start full local Docker stack in detached mode.
 
-Optional Redis check command (if `redis-cli` exists):
-- `redis-cli ping`
+4. `docker compose exec api npm run prisma:seed -w apps/api`  
+   Seed database inside the API container.
 
-Expected:
-- version outputs for node/npm/psql
-- `PONG` for Redis ping
+5. `docker compose ps`  
+   Confirm service status and health.
 
-If Redis is not installed locally, run Redis via Docker:
-- `docker compose up -d redis`
+6. `docker compose logs web --tail 100`  
+   Check Web startup logs.
 
-Then verify port `6379` is listening (PowerShell):
-- `Get-NetTCPConnection -LocalPort 6379 -ErrorAction SilentlyContinue`
-
-### 3) Start local services
-
-- Start PostgreSQL server on `localhost:5432`
-- Start Redis server on `localhost:6379`
-
-### 4) Open repository and create env file
-
-From repo root (`task-platform/`):
-
-PowerShell:
-- `Copy-Item .env.example .env`
-
-Bash:
-- `cp .env.example .env`
-
-### 5) Set required `.env` values for local mode
-
-At minimum verify these values in `.env`:
-- `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/task-platform`
-- `REDIS_URL=redis://localhost:6379`
-- `API_PROXY_TARGET=http://localhost:3001`
-- `JWT_ACCESS_SECRET=...`
-- `JWT_REFRESH_SECRET=...`
-- `CSRF_SECRET=...`
-
-### 6) Create database if missing
-
-Option A (quick):
-- `createdb task-platform`
-
-Option B (inside psql):
-- `psql -U postgres`
-- `CREATE DATABASE "task-platform";`
-
-### 7) Install dependencies and bootstrap database
-
-Run in order:
-- `npm install`
-- `npm run prisma:generate`
-- `npm run prisma:migrate`
-- `npm run prisma:seed`
-
-### 8) Run applications
-
-- `npm run dev`
-
-### 9) Verify application
-
-- Web: `http://localhost:3000`
-- API health: `http://localhost:3001/api/health`
+7. `docker compose logs api --tail 100`  
+   Check API startup logs.
 
 ---
 
-## Path 2 — Run **With Docker** (All services in containers)
+## 3) Deploy on cloud (assuming local Docker images are already running, now push to Docker Hub)
 
-### 1) Install required software
+Section prerequisites:
+- Docker Desktop is running.
+- Local images `task-platform-api:latest` and `task-platform-web:latest` exist.
+- Docker Hub account/credentials are available.
 
-- Docker Desktop: `https://www.docker.com/products/docker-desktop/`
+1. `docker login`  
+   Authenticate Docker client to Docker Hub.
 
-### 2) Verify Docker installation
+2. `docker tag task-platform-api:latest <your-user>/task-platform-api:<tag>`  
+   Tag local API image for Docker Hub.
 
-Run:
-- `docker --version`
-- `docker compose version`
+3. `docker tag task-platform-web:latest <your-user>/task-platform-web:<tag>`  
+   Tag local Web image for Docker Hub.
 
-### 3) Open repository and create env file
+4. `docker push <your-user>/task-platform-api:<tag>`  
+   Push API image to Docker Hub.
 
-From repo root (`task-platform/`):
+5. `docker push <your-user>/task-platform-web:<tag>`  
+   Push Web image to Docker Hub.
 
-PowerShell:
-- `Copy-Item .env.example .env`
+6. `docker pull <your-user>/task-platform-api:<tag>`  
+   Verify API image is available from Docker Hub.
 
-Bash:
-- `cp .env.example .env`
+7. `docker pull <your-user>/task-platform-web:<tag>`  
+   Verify Web image is available from Docker Hub.
 
-### 4) Start full stack
+Example commands:
 
-- `docker compose up --build`
-
-This starts:
-- PostgreSQL
-- Redis
-- API (`3001`)
-- Web (`3000`)
-
-### 5) Seed data (required for first run / new DB volume)
-
-- `docker compose exec api npm run prisma:seed -w apps/api`
-
-### 6) Verify application
-
-- Web: `http://localhost:3000`
-- API health: `http://localhost:3001/api/health`
-
-> Docker-only users do **not** need local PostgreSQL/Redis installed on host.
+- `docker tag task-platform-web:latest ajayjain/task-platform-web:1.0`
+- `docker tag task-platform-api:latest ajayjain/task-platform-api:1.0`
+- `docker push ajayjain/task-platform-web:1.0`
+- `docker push ajayjain/task-platform-api:1.0`
 
 ---
 
-## First Login (both paths)
+## 4) Deploy on cloud from beginning using `docker-compose.cloud.yml` (direct compose commands)
 
-After seeding, login using:
-- Admin: `admin@task.local` / `Admin@123456`
-- User: `user@task.local` / `User@123456`
+Section prerequisites:
+- Docker Desktop is running.
+- You are in repo root (`task-platform`).
+- Files exist: `docker-compose.cloud.yml` and `.env.cloud.example`.
 
-Seed also creates default teams:
-- General
-- Development
-- QA
-- Support
-- Infrastructure
-- Operations
+1. `Copy-Item .env.cloud.example .env.cloud`  
+   Create cloud environment file from template.
+
+2. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml pull`  
+   Pull API/Web and required runtime images.
+
+3. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml up -d`  
+   Start full cloud stack in detached mode.
+
+4. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml ps`  
+   Verify cloud stack service status.
+
+5. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml logs -f`  
+   Follow runtime logs for validation.
+
+6. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml down`  
+   Stop cloud stack services.
+
+7. `docker compose --env-file .env.cloud -f docker-compose.cloud.yml down -v`  
+   Stop services and remove volumes (destructive).
 
 ---
 
-## Optional quality checks
+## 5) Deploy on cloud from beginning using `docker-compose.cloud.yml` (PowerShell scripts)
 
-- `npm run test`
-- `npm run lint`
-- `npm run build`
+Section prerequisites:
+- PowerShell is opened in repo root (`task-platform`).
+- Docker Desktop is running.
+- Files exist: `scripts/docker-cloud.ps1`, `scripts/docker-cloud-verify.ps1`, and `.env.cloud.example`.
 
----
+1. `Copy-Item .env.cloud.example .env.cloud`  
+   Create cloud environment file from template.
 
-## Quick trouble checks
+2. `./scripts/docker-cloud-verify.ps1 -EnvFile .env.cloud`  
+   Verify Docker Hub image/tag availability.
 
-- If API cannot connect to DB in local mode, re-check `DATABASE_URL` and PostgreSQL service status.
-- If Redis errors appear in local mode, re-check `REDIS_URL` and Redis service status.
-- For detailed Redis runtime behavior and fixes, see: `docs/redis_doc.md`.
-- If first login fails, run seed again:
-	- Local: `npm run prisma:seed`
-	- Docker: `docker compose exec api npm run prisma:seed -w apps/api`
+3. `./scripts/docker-cloud.ps1 pull -EnvFile .env.cloud`  
+   Pull all required cloud images.
+
+4. `./scripts/docker-cloud.ps1 up -Detached -EnvFile .env.cloud`  
+   Start cloud stack in background mode.
+
+5. `./scripts/docker-cloud.ps1 ps -EnvFile .env.cloud`  
+   Check cloud stack health/status.
+
+6. `./scripts/docker-cloud.ps1 logs -EnvFile .env.cloud`  
+   View runtime logs for troubleshooting.
+
+7. `./scripts/docker-cloud.ps1 down -EnvFile .env.cloud`  
+   Stop cloud stack services.
+
+8. `./scripts/docker-cloud.ps1 down -RemoveVolumes -EnvFile .env.cloud`  
+   Stop services and remove volumes (destructive).

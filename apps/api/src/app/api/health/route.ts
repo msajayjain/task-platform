@@ -14,6 +14,9 @@
 import { NextResponse } from 'next/server';
 import { env } from '@/infrastructure/config/env';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function checkLocalLlmReadiness() {
   const configuredModel = (env.LOCAL_LLM_MODEL ?? '').trim();
   const configuredUrl = (env.LOCAL_LLM_API_URL ?? '').trim();
